@@ -1,0 +1,55 @@
+version: "3.3"
+services:
+  redis-master:
+    image: ndutertry/redis-ha
+    volumes:
+      - redis-data:/data
+      - redis-conf:/etc/redis
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.hostname == ${REDIS_MASTER_HOSTNAME}
+    networks:
+      - host
+  redis-slave:
+    image: ndutertry/redis-ha
+    volumes:
+      - redis-data:/data
+      - redis-conf:/etc/redis
+    environment:
+      - REDIS_MASTER_HOST=${REDIS_MASTER_IP}
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.hostname == ${REDIS_SLAVE_HOSTNAME}
+    networks:
+      - host
+  redis-sentinel:
+    image: ndutertry/redis-sentinel
+    volumes:
+      - sentinel-conf:/etc/redis
+    deploy:
+      mode: global
+    environment:
+      - REDIS_MASTER_HOST=${REDIS_MASTER_IP}
+      - SENTINEL_DOWN_AFTER=5000
+      - SENTINEL_FAILOVER=15000
+    networks:
+      - host
+  simple-redis-app:
+    image: ndutertry/simple-redis-app
+    ports:
+      - "3000:3000"
+    environment:
+      - SENTINEL_HOST=${SENTINEL_IP}
+    deploy:
+      replicas: 3
+volumes:
+  redis-data:
+  redis-conf:
+  sentinel-conf:
+networks:
+  host:
+    external: true
